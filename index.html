@@ -3,114 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static Media Dashboard</title>
+    <title>Static Search & Media Dashboard</title>
     <style>
-        /* CSS: Layout and Modern Dark-Mode Styling */
         :root {
-            --bg-color: #121212;
-            --container-bg: #1e1e1e;
+            --bg-color: #0f0f0f;
+            --container-bg: #1f1f1f;
             --accent-color: #ff0000;
             --accent-hover: #cc0000;
             --text-main: #ffffff;
             --text-muted: #aaaaaa;
-            --border-color: #333333;
+            --border-color: #3f3f3f;
+            --card-hover: #2a2a2a;
         }
 
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
         }
 
         .dashboard-container {
-            max-width: 900px;
+            max-width: 1000px;
             width: 100%;
             background-color: var(--container-bg);
-            padding: 30px;
+            padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
         }
 
         h1 {
+            text-align: center;
             margin-top: 0;
-            margin-bottom: 8px;
-            font-size: 28px;
-            text-align: center;
+            font-size: 26px;
         }
 
-        .subtitle {
-            color: var(--text-muted);
-            text-align: center;
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .controls-row {
+        .search-row {
             display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .input-field {
-            flex: 2;
-            min-width: 260px;
-        }
-
-        .select-field {
+        input {
             flex: 1;
-            min-width: 180px;
-        }
-
-        input, select, button {
-            padding: 12px 16px;
+            padding: 12px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
             background-color: var(--bg-color);
             color: var(--text-main);
-            font-size: 15px;
+            font-size: 16px;
             outline: none;
-            box-sizing: border-box;
-            width: 100%;
-            transition: border-color 0.2s;
         }
 
-        input:focus, select:focus {
+        input:focus {
             border-color: var(--accent-color);
         }
 
         button {
+            padding: 12px 24px;
             background-color: var(--accent-color);
+            color: white;
             border: none;
-            font-weight: 600;
+            border-radius: 6px;
+            font-weight: bold;
             cursor: pointer;
-            width: auto;
-            min-width: 120px;
-            transition: background-color 0.2s;
+            font-size: 16px;
         }
 
         button:hover {
             background-color: var(--accent-hover);
         }
 
-        .video-viewport {
+        /* 16:9 Player Viewport */
+        .player-window {
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            padding-bottom: 56.25%;
             height: 0;
             overflow: hidden;
-            background-color: #000000;
+            background-color: #000;
             border-radius: 8px;
+            margin-bottom: 25px;
             border: 1px solid var(--border-color);
+            display: none; /* Hidden until a video is loaded */
         }
 
-        .video-viewport iframe {
+        .player-window iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -118,81 +98,191 @@
             height: 100%;
             border: none;
         }
+
+        /* Search Results Grid */
+        .results-heading {
+            font-size: 18px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            display: none;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .video-card {
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
+        }
+
+        .video-card:hover {
+            transform: translateY(-4px);
+            background-color: var(--card-hover);
+            border-color: var(--border-color);
+        }
+
+        .video-card img {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-info {
+            padding: 10px;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 6px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+
+        .video-author {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .status-msg {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 
 <div class="dashboard-container">
-    <h1>Static Media Dashboard</h1>
-    <p class="subtitle">Enter a standard link, short link, or 11-character video ID below.</p>
+    <h1>Searchable Static Dashboard</h1>
     
-    <div class="controls-row">
-        <div class="input-field">
-            <input type="text" id="videoUrlInput" placeholder="Paste URL or Video ID here..." autocomplete="off">
-        </div>
-        <div class="select-field">
-            <select id="gatewayEngine">
-                <option value="youtube-nocookie">Official Privacy Gate (youtube-nocookie.com)</option>
-                <option value="invidious-yewtu">Alternative Mirror Gateway (yewtu.be)</option>
-            </select>
-        </div>
-        <div>
-            <button id="renderBtn">Render Video</button>
-        </div>
+    <div class="search-row">
+        <input type="text" id="searchQuery" placeholder="Type a video title here..." autocomplete="off">
+        <button id="searchBtn">Search</button>
     </div>
 
-    <div class="video-viewport">
-        <!-- The fallback source is initially blank until user triggers the JS -->
-        <iframe id="displayFrame" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    <!-- Embedded Player Unit -->
+    <div class="player-window" id="playerContainer">
+        <iframe id="videoEmbed" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
     </div>
+
+    <!-- Search Results Section -->
+    <div class="results-heading" id="resultsTitle">Search Results</div>
+    <div id="statusMessage" class="status-msg">Enter a title above to look up videos.</div>
+    <div class="results-grid" id="resultsGrid"></div>
 </div>
 
 <script>
-    // JS: Client-Side Input Parsing and Source Swapping
-    document.getElementById('renderBtn').addEventListener('click', processMediaRequest);
-    
-    // Allow pressing "Enter" key inside the input box to load video
-    document.getElementById('videoUrlInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            processMediaRequest();
-        }
+    const searchBtn = document.getElementById('searchBtn');
+    const searchQuery = document.getElementById('searchQuery');
+    const resultsGrid = document.getElementById('resultsGrid');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const statusMessage = document.getElementById('statusMessage');
+    const playerContainer = document.getElementById('playerContainer');
+    const videoEmbed = document.getElementById('videoEmbed');
+
+    // Using a reliable public API hub instance for fetching search results
+    const apiGatewayInstance = 'https://yewtu.be';
+
+    searchBtn.addEventListener('click', executeVideoSearch);
+    searchQuery.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') executeVideoSearch();
     });
 
-    function parseMediaIdentifier(rawInput) {
-        const cleaned = rawInput.trim();
-        if (!cleaned) return null;
+    async function executeVideoSearch() {
+        const query = searchQuery.value.trim();
+        if (!query) return;
 
-        // Regular expression covering variants: standard desktop, watch variables, share links, and embeds
-        const extractionRegex = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
-        const matchedComponents = cleaned.match(extractionRegex);
-        
-        // If regular expression successfully parsed an 11-char string return it, otherwise assume raw input is the ID
-        return (matchedComponents && matchedComponents[1].length === 11) ? matchedComponents[1] : cleaned;
+        // Visual feedback states
+        statusMessage.textContent = 'Searching items... Please wait.';
+        statusMessage.style.display = 'block';
+        resultsGrid.innerHTML = '';
+        resultsTitle.style.display = 'none';
+
+        try {
+            // Request clean structured data using v1 public search protocol
+            const targetUrl = `${apiGatewayInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
+            const response = await fetch(targetUrl);
+            
+            if (!response.ok) throw new Error('Network query failure.');
+            
+            const datasets = await response.json();
+            displayGridResults(datasets);
+        } catch (error) {
+            console.error(error);
+            statusMessage.textContent = 'Unable to fetch results. Please try a different query or wait a moment.';
+        }
     }
 
-    function processMediaRequest() {
-        const inputString = document.getElementById('videoUrlInput').value;
-        const designatedEngine = document.getElementById('gatewayEngine').value;
-        const frameTarget = document.getElementById('displayFrame');
-        
-        const strictVideoId = parseMediaIdentifier(inputString);
-
-        if (!strictVideoId) {
-            alert('Please populate the input field with a valid media identification string.');
+    function displayGridResults(items) {
+        if (!items || items.length === 0) {
+            statusMessage.textContent = 'No matching videos found.';
             return;
         }
 
-        let targetEmbedSource = '';
+        statusMessage.style.display = 'none';
+        resultsTitle.style.display = 'block';
 
-        // Dynamically routing to the specified endpoint based on dropdown configuration
-        if (designatedEngine === 'youtube-nocookie') {
-            targetEmbedSource = `https://youtube-nocookie.com{strictVideoId}`;
-        } else if (designatedEngine === 'invidious-yewtu') {
-            targetEmbedSource = `https://yewtu.be{strictVideoId}`;
-        }
+        items.forEach(item => {
+            // Safeguard against objects missing core parameters
+            if (item.type !== 'video' || !item.videoId) return;
 
-        // Apply string directly to frame location parameter
-        frameTarget.src = targetEmbedSource;
+            const card = document.createElement('div');
+            card.className = 'video-card';
+            
+            // Extract the highest resolution thumbnail from dataset safely
+            const thumbnailSrc = item.videoThumbnails && item.videoThumbnails.length > 0 
+                ? item.videoThumbnails[0].url 
+                : 'https://unsplash.com';
+
+            card.innerHTML = `
+                <img src="${thumbnailSrc}" alt="Preview thumbnail" onerror="this.src='https://unsplash.com'">
+                <div class="video-info">
+                    <p class="video-title">${escapeHtml(item.title)}</p>
+                    <p class="video-author">${escapeHtml(item.author || 'Unknown Channel')}</p>
+                </div>
+            `;
+
+            // Action listener to load video cleanly upon selection
+            card.addEventListener('click', () => {
+                playTargetVideo(item.videoId);
+            });
+
+            resultsGrid.appendChild(card);
+        });
+    }
+
+    function playTargetVideo(id) {
+        // Route player to standard cookie-compliant official endpoint securely
+        videoEmbed.src = `https://youtube-nocookie.com{id}?autoplay=1`;
+        playerContainer.style.display = 'block';
+        
+        // Soft auto-scroll up so the user immediately focuses on the playing video frame
+        playerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Helper syntax sanitizer to minimize cross-site scripting risks during DOM injection
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>
 
