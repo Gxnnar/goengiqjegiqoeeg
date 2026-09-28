@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static Search & Media Dashboard</title>
+    <title>Failover Static Search Dashboard</title>
     <style>
         :root {
             --bg-color: #0f0f0f;
@@ -77,7 +77,6 @@
             background-color: var(--accent-hover);
         }
 
-        /* 16:9 Player Viewport */
         .player-window {
             position: relative;
             padding-bottom: 56.25%;
@@ -87,7 +86,7 @@
             border-radius: 8px;
             margin-bottom: 25px;
             border: 1px solid var(--border-color);
-            display: none; /* Hidden until a video is loaded */
+            display: none;
         }
 
         .player-window iframe {
@@ -99,7 +98,6 @@
             border: none;
         }
 
-        /* Search Results Grid */
         .results-heading {
             font-size: 18px;
             margin-bottom: 12px;
@@ -168,19 +166,17 @@
 <body>
 
 <div class="dashboard-container">
-    <h1>Searchable Static Dashboard</h1>
+    <h1>Robust Static Media Dashboard</h1>
     
     <div class="search-row">
-        <input type="text" id="searchQuery" placeholder="Type a video title here..." autocomplete="off">
+        <input type="text" id="searchQuery" placeholder="Type video title here..." autocomplete="off">
         <button id="searchBtn">Search</button>
     </div>
 
-    <!-- Embedded Player Unit -->
     <div class="player-window" id="playerContainer">
         <iframe id="videoEmbed" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
     </div>
 
-    <!-- Search Results Section -->
     <div class="results-heading" id="resultsTitle">Search Results</div>
     <div id="statusMessage" class="status-msg">Enter a title above to look up videos.</div>
     <div class="results-grid" id="resultsGrid"></div>
@@ -195,8 +191,14 @@
     const playerContainer = document.getElementById('playerContainer');
     const videoEmbed = document.getElementById('videoEmbed');
 
-    // Using a reliable public API hub instance for fetching search results
-    const apiGatewayInstance = 'https://yewtu.be';
+    // A redundant list of open public API servers to rotate through if one is down
+    const backupGateways = [
+        'https://perennialte.ch',
+        'https://melmac.space',
+        'https://flokinet.to',
+        'https://yewtu.be',
+        'https://projectsegfaut.biz'
+    ];
 
     searchBtn.addEventListener('click', executeVideoSearch);
     searchQuery.addEventListener('keypress', function(e) {
@@ -207,30 +209,49 @@
         const query = searchQuery.value.trim();
         if (!query) return;
 
-        // Visual feedback states
-        statusMessage.textContent = 'Searching items... Please wait.';
+        statusMessage.textContent = 'Contacting server network... Please wait.';
         statusMessage.style.display = 'block';
         resultsGrid.innerHTML = '';
         resultsTitle.style.display = 'none';
 
-        try {
-            // Request clean structured data using v1 public search protocol
-            const targetUrl = `${apiGatewayInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
-            const response = await fetch(targetUrl);
-            
-            if (!response.ok) throw new Error('Network query failure.');
-            
-            const datasets = await response.json();
-            displayGridResults(datasets);
-        } catch (error) {
-            console.error(error);
-            statusMessage.textContent = 'Unable to fetch results. Please try a different query or wait a moment.';
+        let successfulData = null;
+
+        // Loop through alternative endpoints automatically if a failure happens
+        for (let i = 0; i < backupGateways.length; i++) {
+            const currentHost = backupGateways[i];
+            try {
+                statusMessage.textContent = `Searching via Node ${i + 1}/${backupGateways.length}...`;
+                
+                // Add a 6-second timeout barrier so the code doesn't hang on a dead server
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+                const response = await fetch(`${currentHost}/api/v1/search?q=${encodeURIComponent(query)}&type=video`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    successfulData = await response.json();
+                    console.log(`Success obtained via gateway node: ${currentHost}`);
+                    break; // Exit loop completely upon valid response data
+                }
+            } catch (err) {
+                console.warn(`Gateway node ${currentHost} rejected query or timed out.`);
+            }
+        }
+
+        if (successfulData) {
+            displayGridResults(successfulData);
+        } else {
+            statusMessage.textContent = 'All regional search gateways are currently occupied. Please click Search again to retry.';
         }
     }
 
     function displayGridResults(items) {
         if (!items || items.length === 0) {
-            statusMessage.textContent = 'No matching videos found.';
+            statusMessage.textContent = 'No matching videos found for this search string.';
             return;
         }
 
@@ -238,26 +259,27 @@
         resultsTitle.style.display = 'block';
 
         items.forEach(item => {
-            // Safeguard against objects missing core parameters
             if (item.type !== 'video' || !item.videoId) return;
 
             const card = document.createElement('div');
             card.className = 'video-card';
             
-            // Extract the highest resolution thumbnail from dataset safely
-            const thumbnailSrc = item.videoThumbnails && item.videoThumbnails.length > 0 
-                ? item.videoThumbnails[0].url 
-                : 'https://unsplash.com';
+            // Standardizing fallback thumbnails in case direct hotlinks are broken
+            let thumbnailSrc = 'https://unsplash.com';
+            if (item.videoThumbnails && item.videoThumbnails.length > 0) {
+                // Find or default to high quality
+                const foundThumb = item.videoThumbnails.find(t => t.quality === 'high' || t.quality === 'medium');
+                thumbnailSrc = foundThumb ? foundThumb.url : item.videoThumbnails[0].url;
+            }
 
             card.innerHTML = `
-                <img src="${thumbnailSrc}" alt="Preview thumbnail" onerror="this.src='https://unsplash.com'">
+                <img src="${thumbnailSrc}" alt="Preview" onerror="this.src='https://unsplash.com'">
                 <div class="video-info">
                     <p class="video-title">${escapeHtml(item.title)}</p>
-                    <p class="video-author">${escapeHtml(item.author || 'Unknown Channel')}</p>
+                    <p class="video-author">${escapeHtml(item.author || 'Channel')}</p>
                 </div>
             `;
 
-            // Action listener to load video cleanly upon selection
             card.addEventListener('click', () => {
                 playTargetVideo(item.videoId);
             });
@@ -267,15 +289,11 @@
     }
 
     function playTargetVideo(id) {
-        // Route player to standard cookie-compliant official endpoint securely
         videoEmbed.src = `https://youtube-nocookie.com{id}?autoplay=1`;
         playerContainer.style.display = 'block';
-        
-        // Soft auto-scroll up so the user immediately focuses on the playing video frame
         playerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Helper syntax sanitizer to minimize cross-site scripting risks during DOM injection
     function escapeHtml(text) {
         return text
             .replace(/&/g, "&amp;")
