@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Media Dashboard</title>
+    <style>
+        /* CSS: Layout and Modern Dark-Mode Styling */
+        :root {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --accent-color: #ff0000;
+            --accent-hover: #cc0000;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .dashboard-container {
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .input-field {
+            flex: 2;
+            min-width: 260px;
+        }
+
+        .select-field {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        input, select, button {
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            width: auto;
+            min-width: 120px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .video-viewport {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            background-color: #000000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .video-viewport iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <h1>Static Media Dashboard</h1>
+    <p class="subtitle">Enter a standard link, short link, or 11-character video ID below.</p>
+    
+    <div class="controls-row">
+        <div class="input-field">
+            <input type="text" id="videoUrlInput" placeholder="Paste URL or Video ID here..." autocomplete="off">
+        </div>
+        <div class="select-field">
+            <select id="gatewayEngine">
+                <option value="youtube-nocookie">Official Privacy Gate (youtube-nocookie.com)</option>
+                <option value="invidious-yewtu">Alternative Mirror Gateway (yewtu.be)</option>
+            </select>
+        </div>
+        <div>
+            <button id="renderBtn">Render Video</button>
+        </div>
+    </div>
+
+    <div class="video-viewport">
+        <!-- The fallback source is initially blank until user triggers the JS -->
+        <iframe id="displayFrame" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    </div>
+</div>
+
+<script>
+    // JS: Client-Side Input Parsing and Source Swapping
+    document.getElementById('renderBtn').addEventListener('click', processMediaRequest);
+    
+    // Allow pressing "Enter" key inside the input box to load video
+    document.getElementById('videoUrlInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            processMediaRequest();
+        }
+    });
+
+    function parseMediaIdentifier(rawInput) {
+        const cleaned = rawInput.trim();
+        if (!cleaned) return null;
+
+        // Regular expression covering variants: standard desktop, watch variables, share links, and embeds
+        const extractionRegex = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+        const matchedComponents = cleaned.match(extractionRegex);
+        
+        // If regular expression successfully parsed an 11-char string return it, otherwise assume raw input is the ID
+        return (matchedComponents && matchedComponents[1].length === 11) ? matchedComponents[1] : cleaned;
+    }
+
+    function processMediaRequest() {
+        const inputString = document.getElementById('videoUrlInput').value;
+        const designatedEngine = document.getElementById('gatewayEngine').value;
+        const frameTarget = document.getElementById('displayFrame');
+        
+        const strictVideoId = parseMediaIdentifier(inputString);
+
+        if (!strictVideoId) {
+            alert('Please populate the input field with a valid media identification string.');
+            return;
+        }
+
+        let targetEmbedSource = '';
+
+        // Dynamically routing to the specified endpoint based on dropdown configuration
+        if (designatedEngine === 'youtube-nocookie') {
+            targetEmbedSource = `https://youtube-nocookie.com{strictVideoId}`;
+        } else if (designatedEngine === 'invidious-yewtu') {
+            targetEmbedSource = `https://yewtu.be{strictVideoId}`;
+        }
+
+        // Apply string directly to frame location parameter
+        frameTarget.src = targetEmbedSource;
+    }
+</script>
+
+</body>
+</html>
